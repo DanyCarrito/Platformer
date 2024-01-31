@@ -15,6 +15,10 @@ public class PlayerMovement : MonoBehaviour
 
     public float GroundCheckRadius = 0.2f;
 
+    [SerializeField] private float jumpTime = 1.0f;
+    [SerializeField] private bool isGrounded = true;
+    [SerializeField] private float jumpTimeCounter;
+
     public float speed;
     public float speedJump;
     public float speedDash;
@@ -23,7 +27,6 @@ public class PlayerMovement : MonoBehaviour
 
     public bool isDashing = false;
     public bool isJumping = false;
-    public bool isGrounded = false;
     public bool isCoyoteTime= false;
 
     void Start()
@@ -35,32 +38,33 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, GroundCheckRadius, GroundLayer);
 
         float moveDelta = Time.deltaTime * speed;
         mytransform.Translate(moveDelta * new Vector2(Input.GetAxis("Horizontal"), 0));
 
-        //if (isGrounded)
-        //{
-        //    isJumping = false;
-        //    isCoyoteTime = true;
-        //    timeCoyote = 0;
-        //}
 
-        //if (isJumping || !isCoyoteTime)
-        //{
-        //    addGravity();
-        //}
-
-        //if (!isGrounded && isCoyoteTime)
-        //{
-        //    timeCoyote += Time.deltaTime;
-        //    if (timeCoyote > timerCoyoteTime) isCoyoteTime = false;
-        //}
-
-        if (Input.GetKey(KeyCode.W))
+        if (isJumping)
         {
-            jump();
+            if (jumpTimeCounter > 0)
+            {
+
+                var jumpForce = Time.deltaTime * speedJump;
+                jumpTimeCounter -= Time.deltaTime;
+                mytransform.Translate(Vector2.up * jumpForce);
+                
+            }
+            else
+            {
+                isJumping = false;
+            }
+        }
+
+        if(isGrounded)
+        {
+            if (Input.GetKeyDown(KeyCode.W) && !isJumping)
+            {
+                jump();
+            }
         }
 
 
@@ -72,16 +76,10 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void jump()
-    { 
-        isJumping = true;
-        float jumpForce = Time.deltaTime * speedJump;
-        mytransform.Translate(Vector2.up * jumpForce);
-    }
-
-    void addGravity()
     {
-        float gravityForce = Physics2D.gravity.y * Time.deltaTime;
-        mytransform.Translate(Vector2.up * gravityForce);
+        isJumping = true;
+        jumpTimeCounter = jumpTime;
+
     }
 
     void dash()
@@ -98,6 +96,7 @@ public class PlayerMovement : MonoBehaviour
             mytransform.Translate(Vector2.left * (mytransform.localScale.x * dashForce));
         }
     }
+
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Hazard"))
@@ -105,11 +104,28 @@ public class PlayerMovement : MonoBehaviour
             playAgain();
         }
 
+        if (collision.gameObject.CompareTag("Floor"))
+        {
+            isGrounded = true;
+        }
+
+    }
+
+    private void OnCollisionExit2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Floor"))
+        {
+            isGrounded = false;
+        }
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (collision.gameObject.CompareTag("Win"))
+        {
+            victory();
+        }
+        if (collision.gameObject.CompareTag("Die"))
         {
             victory();
         }
